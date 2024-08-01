@@ -1,34 +1,55 @@
 // src/app/admin/page.tsx
-
 "use client";
 
-import { useState } from "react";
 import Head from "next/head";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAuth, signInAnonymously } from "firebase/auth";
-import { firebaseSDK } from "@/services/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { firestore } from "@/services/firebase";
+import Swal from "sweetalert2";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const router = useRouter();
-  const auth = getAuth(firebaseSDK);
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    setError("");
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("admin");
+    if (isLoggedIn) {
+      router.push("/admin");
+    }
+  }, [router]);
 
-    if (username === "admin" && password === "admin") {
-      try {
-        await signInAnonymously(auth);
-        router.push("/admin");
-      } catch (error) {
-        setError("Failed to sign in anonymously");
-        console.error("Error signing in anonymously:", error);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const adminsRef = collection(firestore, "admins");
+      const q = query(adminsRef, where("username", "==", username), where("password", "==", password));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        localStorage.setItem("admin", "true");
+        Swal.fire({
+          icon: "success",
+          title: "Login Berhasil",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        router.push("/");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Login Gagal",
+          text: "Username atau password salah",
+        });
       }
-    } else {
-      setError("Invalid username or password");
+    } catch (error) {
+      console.error("Error during login:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Terjadi Kesalahan",
+        text: "Tidak dapat melakukan login. Silakan coba lagi nanti.",
+      });
     }
   };
 
@@ -60,10 +81,10 @@ const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          {error && <p className="text-red-500 text-xs italic">{error}</p>}
           <button
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="submit">
+            type="submit"
+          >
             Login
           </button>
         </form>

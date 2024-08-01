@@ -1,37 +1,24 @@
-// src/app/admin/page.tsx
-
 "use client";
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs, doc, deleteDoc } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { firebaseSDK } from "@/services/firebase";
+import useAuth from "@/hooks/useAuth"; // Ensure correct import path
+import Swal from "sweetalert2";
 
 export default function Home() {
+  useAuth(); // Check authentication
+
   const firestore = getFirestore(firebaseSDK);
-  const auth = getAuth(firebaseSDK);
-  const router = useRouter();
   const [wisataData, setWisataData] = useState([]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push("/admin");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [auth, router]);
 
   useEffect(() => {
     const fetchData = async () => {
       const wisataCollection = collection(firestore, "wisata");
       const wisataSnapshot = await getDocs(wisataCollection);
-      const wisataList = wisataSnapshot.docs.map(doc => ({
+      const wisataList = wisataSnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setWisataData(wisataList);
     };
@@ -41,25 +28,61 @@ export default function Home() {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(firestore, "wisata", id));
-      setWisataData(prevData => prevData.filter(wisata => wisata.id !== id));
+      // Show confirmation dialog
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!',
+      });
+
+      if (result.isConfirmed) {
+        await deleteDoc(doc(firestore, "wisata", id));
+        setWisataData((prevData) => prevData.filter((wisata) => wisata.id !== id));
+
+        Swal.fire(
+          'Deleted!',
+          'Your file has been deleted.',
+          'success'
+        );
+      }
     } catch (error) {
       console.error("Error deleting document: ", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete the item. Please try again later.',
+      });
     }
   };
 
   const handleEdit = (id) => {
-    router.push(`/edit-wisata?id=${id}`);
+    Swal.fire({
+      title: 'Edit Wisata',
+      text: 'This will navigate to the edit page.',
+      icon: 'info',
+      confirmButtonColor: '#3085d6',
+      confirmButtonText: 'Go to Edit Page',
+      showCancelButton: true,
+      cancelButtonColor: '#d33',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Redirect to edit page
+        window.location.href = `/edit-wisata?id=${id}`;
+      }
+    });
   };
 
   return (
     <main className="h-screen p-4 bg-gray-100">
       <div className="container mx-auto bg-white shadow-md rounded-lg p-6 overflow-x-auto">
-        <Link href="/add-wisata">
-          <button className="inline-block mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-            Tambah Wisata
-          </button>
-        </Link>
+        <a href="/add-wisata" className="inline-block mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Tambah Wisata
+        </a>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -95,8 +118,18 @@ export default function Home() {
                     Lat: {wisata.lokasi.latitude}, Lon: {wisata.lokasi.longitude}
                   </td>
                   <td className="py-4 px-6">
-                    <button onClick={() => handleEdit(wisata.id)} className="text-blue-500">Edit</button>
-                    <button onClick={() => handleDelete(wisata.id)} className="text-red-500 ml-2">Delete</button>
+                    <button
+                      onClick={() => handleEdit(wisata.id)}
+                      className="text-blue-500 mr-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(wisata.id)}
+                      className="text-red-500"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))

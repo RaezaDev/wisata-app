@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { firestore, storage } from '@/services/firebase'
+import { firestore, storage } from '@/services/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Swal from 'sweetalert2';
 
-const EditWisata = ({ params }) => {
+const EditWisata = () => {
   const [namaWisata, setNamaWisata] = useState('');
   const [kategori, setKategori] = useState('');
   const [alamat, setAlamat] = useState('');
@@ -18,55 +19,84 @@ const EditWisata = ({ params }) => {
   const [image, setImage] = useState(null);
   const [existingImage, setExistingImage] = useState('');
   const router = useRouter();
-  const { id } = params;
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
 
+  // Tambahkan logging untuk memastikan id diteruskan dengan benar
   useEffect(() => {
+    console.log("ID:", id);
+
     const fetchData = async () => {
-      const docRef = doc(firestore, 'wisata', id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setNamaWisata(data.nama_wisata);
-        setKategori(data.kategori);
-        setAlamat(data.alamat);
-        setWaktuOperasional(data.waktu_operasional);
-        setKarcis(data.karcis);
-        setRating(data.rating);
-        setDeskripsi(data.deskripsi);
-        setLokasi(data.lokasi);
-        setExistingImage(data.image);
-      } else {
-        console.log('No such document!');
+      try {
+        const docRef = doc(firestore, 'wisata', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setNamaWisata(data.nama_wisata);
+          setKategori(data.kategori);
+          setAlamat(data.alamat);
+          setWaktuOperasional(data.waktu_operasional);
+          setKarcis(data.karcis);
+          setRating(data.rating);
+          setDeskripsi(data.deskripsi);
+          setLokasi(data.lokasi);
+          setExistingImage(data.image);
+        } else {
+          console.log('No such document!');
+        }
+      } catch (error) {
+        console.error("Error fetching document:", error);
       }
     };
 
-    fetchData();
+    if (id) {
+      fetchData();
+    }
   }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let imageUrl = existingImage;
 
-    if (image) {
-      const storageRef = ref(storage, `images/${image.name}`);
-      await uploadBytes(storageRef, image);
-      imageUrl = await getDownloadURL(storageRef);
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to save the changes?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, save it!'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        let imageUrl = existingImage;
 
-    const docRef = doc(firestore, 'wisata', id);
-    await updateDoc(docRef, {
-      nama_wisata: namaWisata,
-      kategori,
-      alamat,
-      waktu_operasional: waktuOperasional,
-      karcis,
-      rating,
-      deskripsi,
-      lokasi,
-      image: imageUrl,
+        if (image) {
+          const storageRef = ref(storage, `images/${image.name}`);
+          await uploadBytes(storageRef, image);
+          imageUrl = await getDownloadURL(storageRef);
+        }
+
+        const docRef = doc(firestore, 'wisata', id);
+        await updateDoc(docRef, {
+          nama_wisata: namaWisata,
+          kategori,
+          alamat,
+          waktu_operasional: waktuOperasional,
+          karcis,
+          rating,
+          deskripsi,
+          lokasi,
+          image: imageUrl,
+        });
+
+        Swal.fire(
+          'Saved!',
+          'Your changes have been saved.',
+          'success'
+        );
+
+        router.push('/');
+      }
     });
-
-    router.push('/');
   };
 
   return (

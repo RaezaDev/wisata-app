@@ -1,11 +1,10 @@
-// src/components/Navbar.tsx
-'use client';
-
+// src/app/components/Navbar.tsx
+"use client"
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {UserCircleIcon } from '@heroicons/react/24/outline';
-
+import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { showAlert, showConfirmAlert } from '@/services/sweetalert';
+import Link from 'next/link';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,9 +14,19 @@ const Navbar = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleLogout = () => {
-    console.log("Admin logged out");
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    const result = await showConfirmAlert(
+      "Logout",
+      "Are you sure you want to logout?",
+      "warning",
+      "Yes, logout",
+      "Cancel"
+    );
+    if (result.isConfirmed) {
+      localStorage.removeItem("admin");
+      showAlert("Logged out", "You have been logged out successfully", "success");
+      router.push("/admin");
+    }
   };
 
   return (
@@ -26,8 +35,9 @@ const Navbar = () => {
         <div className="text-white font-bold text-xl">Admin Panel</div>
         <div className="hidden md:flex items-center space-x-4">
           <Link href="/" className="text-white hover:text-gray-300 transition">Kelola Wisata</Link>
-          <Link href="/pengajuan-wisata" className="text-white hover:text-gray-300 transition">Pengajuan Wisata</Link>
-          <Link href="/admin" className="text-white hover:text-gray-300 transition">About</Link>
+          <Link href="/pengajuan_wisata" className="text-white hover:text-gray-300 transition">Pengajuan Wisata</Link>
+          <Link href="/feedback" className="text-white hover:text-gray-300 transition">Umpan Balik</Link>
+          <Link href="/about" className="text-white hover:text-gray-300 transition">About</Link>
           <div className="relative">
             <button onClick={toggleMenu} className="text-white focus:outline-none">
               <UserCircleIcon className="h-8 w-8" />
@@ -46,14 +56,15 @@ const Navbar = () => {
         </div>
         <div className="md:hidden">
           <button onClick={toggleMenu} className="text-white focus:outline-none">
-            {/* {isOpen ? <XIcon className="h-8 w-8" /> : <MenuIcon className="h-8 w-8" />} */}
+            {/* {isOpen ? <XMarkIcon className="h-8 w-8" /> : <InboxStackIcon className="h-8 w-8" />} */}
           </button>
         </div>
       </div>
       {isOpen && (
         <div className="md:hidden mt-2 space-y-2">
-          <Link href="/kelola-wisata" className="block px-4 py-2 text-white hover:bg-blue-700 transition">Kelola Wisata</Link>
+          <Link href="/" className="block px-4 py-2 text-white hover:bg-blue-700 transition">Kelola Wisata</Link>
           <Link href="/pengajuan-wisata" className="block px-4 py-2 text-white hover:bg-blue-700 transition">Pengajuan Wisata</Link>
+          <Link href="/feedback" className="block px-4 py-2 text-white hover:bg-blue-700 transition">Umpan Balik</Link>
           <Link href="/about" className="block px-4 py-2 text-white hover:bg-blue-700 transition">About</Link>
           <button
             onClick={handleLogout}

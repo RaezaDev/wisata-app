@@ -1,7 +1,7 @@
 // src/services/firebase.ts
 
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -18,11 +18,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const firebaseSDK = initializeApp(firebaseConfig);
 
-// Initialize Firestore, Storage, and Auth
+// Initialize Firestore and Storage
 const firestore = getFirestore(firebaseSDK);
 const storage = getStorage(firebaseSDK);
 
-export { firebaseSDK, firestore, storage};
+export { firebaseSDK, firestore, storage };
 
 // Function to upload image
 export const uploadImage = async (file: File) => {
@@ -35,4 +35,16 @@ export const uploadImage = async (file: File) => {
     console.error("Error uploading image:", error);
     throw error; // Rethrow the error to handle it in the calling function
   }
+};
+
+// Function to check admin credentials
+export const checkAdminCredentials = async (username, password) => {
+  const adminsRef = collection(firestore, 'admins');
+  const q = query(adminsRef, where('username', '==', username), where('password', '==', password));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    return false; // No matching admin found
+  }
+  return true; // Matching admin found
 };
